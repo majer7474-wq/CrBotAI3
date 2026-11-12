@@ -1,0 +1,20 @@
+plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace 'com.crbot.ai'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.crbot.ai'
+        minSdk 26
+        targetSdk 35
+        versionCode 2
+        versionName '3.0-alpha2'
+    }
+}
+
+dependencies {
+    implementation 'com.google.mlkit:text-recognition:16.0.1'
+}
