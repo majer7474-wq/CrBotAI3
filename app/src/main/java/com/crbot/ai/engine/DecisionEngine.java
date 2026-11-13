@@ -68,7 +68,7 @@ public class DecisionEngine {
                 hog,
                 CardCatalog.HOG_RIDER,
                 0.5f,
-                0.39f,
+                0.54f,
                 "Hog Rider attack."
             );
         }
@@ -80,7 +80,7 @@ public class DecisionEngine {
             if (spirit >= 0 && state.ownElixir >= 1f) {
                 return play(
                     state, spirit, CardCatalog.ICE_SPIRIT,
-                    0.5f, 0.40f, "Ice Spirit cycle."
+                    0.5f, 0.62f, "Ice Spirit cycle."
                 );
             }
 

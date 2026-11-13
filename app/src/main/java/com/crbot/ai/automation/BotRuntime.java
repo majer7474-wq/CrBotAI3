@@ -20,6 +20,7 @@ public final class BotRuntime {
         synchronized (LOCK) {
             active = true;
             automationEnabled = false;
+            BotController.reset();
         }
     }
 

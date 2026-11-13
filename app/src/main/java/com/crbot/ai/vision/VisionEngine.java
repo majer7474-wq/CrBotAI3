@@ -1,11 +1,13 @@
 package com.crbot.ai.vision;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Rect;
 import android.util.Log;
 
 import com.crbot.ai.game.GameState;
+import com.crbot.ai.game.CardCatalog;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
@@ -13,6 +15,7 @@ import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
 import java.util.regex.Pattern;
+import java.util.Arrays;
 
 public class VisionEngine {
 
@@ -22,6 +25,13 @@ public class VisionEngine {
 
     private final TextRecognizer recognizer =
         TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS);
+
+    private final CardTemplateRecognizer cardRecognizer;
+    private int[] pendingHand = {
+        CardCatalog.UNKNOWN, CardCatalog.UNKNOWN,
+        CardCatalog.UNKNOWN, CardCatalog.UNKNOWN
+    };
+    private int pendingHandCount = 0;
 
     private byte[] previousPixels;
     private volatile GameState latestState = new GameState();
@@ -39,6 +49,10 @@ public class VisionEngine {
 
     private static final Pattern ELIXIR_PATTERN =
         Pattern.compile("^(10|[0-9])$");
+
+    public VisionEngine(Context context) {
+        cardRecognizer = new CardTemplateRecognizer(context.getAssets());
+    }
 
     public GameState getLatestState() {
         return latestState;
@@ -349,12 +363,14 @@ public class VisionEngine {
         small.recycle();
     }
 
+
     private void calculateCardFingerprints(
         Bitmap frame,
         GameState state
     ) {
         int width = frame.getWidth();
         int height = frame.getHeight();
+        int[] detected = new int[4];
 
         for (int card = 0; card < 4; card++) {
             float left = 0.05f + card * 0.225f;
@@ -362,11 +378,20 @@ public class VisionEngine {
 
             int x1 = Math.max(0, (int) (width * left));
             int x2 = Math.min(width, (int) (width * right));
-            int y1 = (int) (height * VisionConfig.HAND_TOP);
-            int y2 = Math.min(
-                height,
-                (int) (height * VisionConfig.HAND_BOTTOM)
-            );
+            int y1 = Math.max(0, (int) (height * VisionConfig.HAND_TOP));
+            int y2 = Math.min(height,
+                (int) (height * VisionConfig.HAND_BOTTOM));
+
+            if (x2 <= x1 || y2 <= y1) {
+                detected[card] = CardCatalog.UNKNOWN;
+                continue;
+            }
+
+            Rect bounds = new Rect(x1, y1, x2, y2);
+            CardTemplateRecognizer.Result result =
+                cardRecognizer.recognize(frame, bounds);
+
+            detected[card] = result.cardId;
 
             long hash = 0;
             int bit = 0;
@@ -376,17 +401,14 @@ public class VisionEngine {
                     int x = x1 + (x2 - x1) * gx / 4;
                     int y = y1 + (y2 - y1) * gy / 4;
 
-                    if (x < width && y < height) {
-                        int color = frame.getPixel(x, y);
-                        int gray = (
-                            Color.red(color) +
-                            Color.green(color) +
-                            Color.blue(color)
-                        ) / 3;
+                    int color = frame.getPixel(x, y);
+                    int gray = (
+                        Color.red(color) +
+                        Color.green(color) +
+                        Color.blue(color)
+                    ) / 3;
 
-                        hash ^= ((long) gray << (bit % 56));
-                    }
-
+                    hash ^= ((long) gray << (bit % 56));
                     bit++;
                 }
             }
@@ -394,7 +416,31 @@ public class VisionEngine {
             state.cardFingerprints[card] = hash;
             previousCards[card] = hash;
         }
+
+        if (Arrays.equals(detected, pendingHand)) {
+            pendingHandCount++;
+        } else {
+            pendingHand = detected.clone();
+            pendingHandCount = 1;
+        }
+
+        boolean allKnown = true;
+        for (int id : pendingHand) {
+            if (!CardCatalog.isKnown(id)) {
+                allKnown = false;
+                break;
+            }
+        }
+
+        state.handDetected = pendingHandCount >= 2 && allKnown;
+
+        if (state.handDetected) {
+            state.hand = pendingHand.clone();
+        } else {
+            Arrays.fill(state.hand, CardCatalog.UNKNOWN);
+        }
     }
+
 
     public void close() {
         recognizer.close();

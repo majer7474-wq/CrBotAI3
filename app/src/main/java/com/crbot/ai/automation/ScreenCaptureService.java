@@ -34,7 +34,7 @@ public class ScreenCaptureService extends Service {
     private VirtualDisplay display;
     private ImageReader reader;
 
-    private final VisionEngine vision = new VisionEngine();
+    private VisionEngine vision;
 
     private HandlerThread captureThread;
     private Handler captureHandler;
@@ -47,6 +47,7 @@ public class ScreenCaptureService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+        vision = new VisionEngine(this);
 
         createNotificationChannel();
         startForegroundCompat(createNotification());
@@ -257,6 +258,7 @@ public class ScreenCaptureService extends Service {
                 );
 
                 VisionStatus.onFrame(state);
+                BotController.onFrame(state);
                 processing.set(false);
             });
 

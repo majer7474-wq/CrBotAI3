@@ -3,6 +3,7 @@ package com.crbot.ai.automation;
 import com.crbot.ai.game.GameState;
 import com.crbot.ai.game.ElixirTracker;
 import com.crbot.ai.game.CardCatalog;
+import java.util.Arrays;
 
 public final class VisionStatus {
 
@@ -14,6 +15,7 @@ public final class VisionStatus {
     private static long lastFrameTime = 0;
 
     private static final ElixirTracker elixirTracker = new ElixirTracker();
+    private static int[] lastStableHand = null;
 
     private static float ownElixir = -1f;
     private static boolean elixirDetected = false;
@@ -28,6 +30,7 @@ public final class VisionStatus {
     public static synchronized void onCaptureStarted() {
         captureActive = true;
         battleStarted = false;
+        lastStableHand = null;
         framesProcessed = 0;
         ocrSuccesses = 0;
         ocrErrors = 0;
@@ -43,6 +46,7 @@ public final class VisionStatus {
 
     public static synchronized void startBattle() {
         elixirTracker.reset(5f);
+        lastStableHand = null;
         battleStarted = true;
         ownElixir = 5f;
         elixirDetected = true;
@@ -51,6 +55,7 @@ public final class VisionStatus {
     public static synchronized void onCaptureStopped() {
         captureActive = false;
         battleStarted = false;
+        lastStableHand = null;
         ownElixir = -1f;
         elixirDetected = false;
     }
@@ -83,11 +88,59 @@ public final class VisionStatus {
             ? "" : state.rawElixirOcr;
 
         if (battleStarted) {
+            if (state.handDetected && state.hasUsableHand()) {
+                if (lastStableHand == null) {
+                    lastStableHand = state.hand.clone();
+                } else if (!Arrays.equals(lastStableHand, state.hand)) {
+                    int removedCard = CardCatalog.UNKNOWN;
+                    int removedCount = 0;
+                    int addedCount = 0;
+
+                    for (int oldId : lastStableHand) {
+                        boolean found = false;
+                        for (int newId : state.hand) {
+                            if (oldId == newId) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) {
+                            removedCard = oldId;
+                            removedCount++;
+                        }
+                    }
+
+                    for (int newId : state.hand) {
+                        boolean found = false;
+                        for (int oldId : lastStableHand) {
+                            if (newId == oldId) {
+                                found = true;
+                                break;
+                            }
+                        }
+                        if (!found) addedCount++;
+                    }
+
+                    if (removedCount == 1 && addedCount == 1) {
+                        int cost = CardCatalog.cost(removedCard);
+                        if (cost >= 0) elixirTracker.onCardPlayed(cost);
+                    }
+
+                    lastStableHand = state.hand.clone();
+                }
+            }
+
             ownElixir = elixirTracker.getEstimate();
             elixirDetected = true;
+            state.ownElixir = ownElixir;
+            state.elixirDetected = true;
+            state.visionReliable = state.handDetected && state.hasUsableHand();
         } else {
             ownElixir = -1f;
             elixirDetected = false;
+            state.ownElixir = -1f;
+            state.elixirDetected = false;
+            state.visionReliable = false;
         }
 
         enemyMotion = state.enemyMotion;
