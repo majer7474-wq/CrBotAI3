@@ -2,8 +2,12 @@ package com.crbot.ai.game;
 
 public class ElixirTracker {
 
-    private static final long DOUBLE_ELIXIR_AT_NS = 120_000_000_000L;
-    private static final long TRIPLE_ELIXIR_AT_NS = 240_000_000_000L;
+    // Standardna bitka: double nakon 2:00, triple nakon 2:30.
+    private static final long DOUBLE_ELIXIR_AT_NS =
+        120_000_000_000L;
+    private static final long TRIPLE_ELIXIR_AT_NS =
+        240_000_000_000L;
+
     private static final float BASE_SECONDS_PER_ELIXIR = 2.8f;
 
     private float estimated = 5.0f;
@@ -12,10 +16,7 @@ public class ElixirTracker {
     private boolean battleStarted = false;
 
     public synchronized void startBattle() {
-        estimated = 5.0f;
-        battleStartNanos = System.nanoTime();
-        lastUpdateNanos = battleStartNanos;
-        battleStarted = true;
+        reset(5.0f);
     }
 
     public synchronized float update(float elapsedSeconds) {
@@ -24,7 +25,8 @@ public class ElixirTracker {
     }
 
     public synchronized void onCardPlayed(int cost) {
-        if (!battleStarted || cost < 0) return;
+        if (!battleStarted || cost < 0 || cost > 10) return;
+
         updateToNow();
         estimated = Math.max(0f, estimated - cost);
     }
@@ -43,8 +45,10 @@ public class ElixirTracker {
 
     public synchronized long getElapsedSeconds() {
         if (!battleStarted) return 0L;
+
         return Math.max(0L,
-            (System.nanoTime() - battleStartNanos) / 1_000_000_000L);
+            (System.nanoTime() - battleStartNanos)
+                / 1_000_000_000L);
     }
 
     public synchronized int getMultiplier() {
@@ -54,6 +58,7 @@ public class ElixirTracker {
 
         if (elapsed >= TRIPLE_ELIXIR_AT_NS) return 3;
         if (elapsed >= DOUBLE_ELIXIR_AT_NS) return 2;
+
         return 1;
     }
 
@@ -71,15 +76,18 @@ public class ElixirTracker {
 
         while (cursor < now && estimated < 10f) {
             long elapsed = cursor - battleStartNanos;
+
             int multiplier;
             long nextBoundary;
 
             if (elapsed < DOUBLE_ELIXIR_AT_NS) {
                 multiplier = 1;
-                nextBoundary = battleStartNanos + DOUBLE_ELIXIR_AT_NS;
+                nextBoundary =
+                    battleStartNanos + DOUBLE_ELIXIR_AT_NS;
             } else if (elapsed < TRIPLE_ELIXIR_AT_NS) {
                 multiplier = 2;
-                nextBoundary = battleStartNanos + TRIPLE_ELIXIR_AT_NS;
+                nextBoundary =
+                    battleStartNanos + TRIPLE_ELIXIR_AT_NS;
             } else {
                 multiplier = 3;
                 nextBoundary = Long.MAX_VALUE;
@@ -93,7 +101,8 @@ public class ElixirTracker {
 
             estimated = Math.min(
                 10f,
-                estimated + seconds * multiplier / BASE_SECONDS_PER_ELIXIR
+                estimated + seconds * multiplier
+                    / BASE_SECONDS_PER_ELIXIR
             );
 
             cursor = segmentEnd;

@@ -2,6 +2,7 @@ package com.crbot.ai.automation;
 
 import com.crbot.ai.game.GameState;
 import com.crbot.ai.game.ElixirTracker;
+import com.crbot.ai.game.CardCatalog;
 
 public final class VisionStatus {
 
@@ -92,6 +93,17 @@ public final class VisionStatus {
         enemyMotion = state.enemyMotion;
         ownMotion = state.ownMotion;
         visionReliable = state.visionReliable;
+    }
+
+    public static synchronized void onCardPlayed(int cardId) {
+        if (!battleStarted) return;
+
+        int cost = CardCatalog.cost(cardId);
+        if (cost < 0) return;
+
+        elixirTracker.onCardPlayed(cost);
+        ownElixir = elixirTracker.getEstimate();
+        elixirDetected = true;
     }
 
     public static synchronized String getReport() {
