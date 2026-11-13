@@ -123,13 +123,20 @@ public final class VisionStatus {
         out.append("Elixir procjena: ");
 
         if (battleStarted) {
+            ownElixir = elixirTracker.getEstimate();
             out.append(String.format(java.util.Locale.US, "%.1f/10", ownElixir));
-            out.append(" (bez automatskog odbijanja potrosenih karata)");
+            out.append("\\nBrzina regeneracije: ")
+                .append(elixirTracker.getPhaseLabel());
+            long elapsed = elixirTracker.getElapsedSeconds();
+            out.append("\\nVrijeme od starta: ")
+                .append(String.format(java.util.Locale.US, "%02d:%02d",
+                    elapsed / 60, elapsed % 60));
+            out.append("\\nPotrošnja karata: nije automatski praćena");
         } else {
             out.append("pokreni bitku reset tipkom na 5");
         }
 
-        out.append("\nSirovi OCR eliksira: ")
+        out.append("\\nSirovi OCR eliksira: ")
             .append(rawElixirOcr).append("\n\n");
 
         out.append("Kretanje protivnika: ")
