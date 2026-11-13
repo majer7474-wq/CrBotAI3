@@ -35,7 +35,7 @@ public class VisionEngine {
     private long acceptedElixirTime = 0;
 
     private static final int OCR_SCALE = 3;
-    private static final int REQUIRED_STABLE_READS = 3;
+    private static final int REQUIRED_STABLE_READS = 2;
 
     private static final Pattern ELIXIR_PATTERN =
         Pattern.compile("^(10|[0-9])$");
@@ -241,8 +241,8 @@ public class VisionEngine {
 
                     // Prednost daje broju u donjem lijevom dijelu izreza.
                     double score =
-                        Math.abs(centerX - 0.42f) +
-                        Math.abs(centerY - 0.70f) * 0.8;
+                        Math.abs(centerX - 0.55f) +
+                        Math.abs(centerY - 0.72f) * 1.2;
 
                     if (score < bestScore) {
                         bestScore = score;
@@ -274,7 +274,7 @@ public class VisionEngine {
         long age = System.currentTimeMillis() - acceptedElixirTime;
 
         // Ne prikazuj staro ocitanje kao da je aktualno.
-        if (acceptedElixir >= 0 && age <= 2000) {
+        if (acceptedElixir >= 0 && age <= 1300) {
             state.ownElixir = acceptedElixir;
             state.elixirDetected = true;
         } else {
