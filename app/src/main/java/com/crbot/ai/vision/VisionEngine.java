@@ -37,6 +37,11 @@ public class VisionEngine {
     private volatile GameState latestState = new GameState();
 
     private final long[] previousCards = new long[4];
+    private float previousBarX = -1f;
+    private float previousBarY = -1f;
+    private int stableBarFrames = 0;
+
+
 
     // Stabilizacija OCR rezultata.
     private int pendingElixir = -1;
@@ -69,6 +74,7 @@ public class VisionEngine {
 
         try {
             calculateMotion(frame, state);
+            detectEnemyHealthBar(frame, state);
             calculateCardFingerprints(frame, state);
 
             int width = frame.getWidth();
@@ -302,6 +308,83 @@ public class VisionEngine {
             " stable=" + pendingCount +
             " accepted=" + acceptedElixir
         );
+    }
+
+
+    private void detectEnemyHealthBar(Bitmap frame, GameState state) {
+        int sw = 144;
+        int sh = 256;
+        Bitmap small = Bitmap.createScaledBitmap(frame, sw, sh, true);
+
+        int bestX = -1;
+        int bestY = -1;
+        int bestRun = 0;
+
+        try {
+            for (int y = 45; y < 195; y++) {
+                int run = 0;
+                int start = 0;
+
+                for (int x = 12; x < 132; x++) {
+                    int c = small.getPixel(x, y);
+                    int r = Color.red(c);
+                    int g = Color.green(c);
+                    int b = Color.blue(c);
+
+                    boolean red = r > 155 && g < 115 && b < 115
+                        && r > g * 1.45 && r > b * 1.35;
+
+                    if (red) {
+                        if (run == 0) start = x;
+                        run++;
+                    } else {
+                        if (run > bestRun) {
+                            bestRun = run;
+                            bestX = start + run / 2;
+                            bestY = y;
+                        }
+                        run = 0;
+                    }
+                }
+
+                if (run > bestRun) {
+                    bestRun = run;
+                    bestX = start + run / 2;
+                    bestY = y;
+                }
+            }
+        } finally {
+            small.recycle();
+        }
+
+        if (bestRun >= 7 && bestX >= 0) {
+            float x = bestX / 144f;
+            float y = bestY / 256f;
+
+            if (previousBarX >= 0
+                && Math.abs(x - previousBarX) < 0.18f
+                && Math.abs(y - previousBarY) < 0.13f) {
+                stableBarFrames++;
+            } else {
+                stableBarFrames = 1;
+            }
+
+            previousBarX = x;
+            previousBarY = y;
+
+            state.enemyTroopDetected = stableBarFrames >= 2;
+            state.enemyThreatDetected = state.enemyTroopDetected;
+            state.enemyTroopX = x;
+            state.enemyTroopY = y;
+            state.enemyTroopOnOurSide = y > 0.43f;
+        } else {
+            stableBarFrames = 0;
+            previousBarX = -1f;
+            previousBarY = -1f;
+            state.enemyTroopDetected = false;
+            state.enemyThreatDetected = false;
+            state.enemyTroopOnOurSide = false;
+        }
     }
 
     private void calculateMotion(Bitmap frame, GameState state) {

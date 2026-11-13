@@ -18,14 +18,8 @@ public class DecisionEngine {
         public final float y;
         public final String reason;
 
-        public Decision(
-            ActionType type,
-            int cardIndex,
-            int cardId,
-            float x,
-            float y,
-            String reason
-        ) {
+        public Decision(ActionType type, int cardIndex, int cardId,
+                        float x, float y, String reason) {
             this.type = type;
             this.cardIndex = cardIndex;
             this.cardId = cardId;
@@ -35,9 +29,9 @@ public class DecisionEngine {
         }
     }
 
-    public Decision decide(GameState state) {
+    private boolean nextHogLeft = true;
 
-        // Never play from incomplete, stale or unverified information.
+    public Decision decide(GameState state) {
         if (state == null ||
             !state.visionReliable ||
             !state.elixirDetected ||
@@ -49,149 +43,82 @@ public class DecisionEngine {
             return waitDecision("Game state nije pouzdan.");
         }
 
-        // DEFENSE: react only to a detected troop on our side.
         if (state.enemyThreatDetected &&
             state.enemyTroopDetected &&
             state.enemyTroopOnOurSide) {
-
             Decision defense = chooseDefense(state);
-
             if (defense != null) return defense;
         }
 
-        // OFFENSE: Hog Rider is the primary win condition.
         int hog = state.findCard(CardCatalog.HOG_RIDER);
-
         if (hog >= 0 && state.ownElixir >= 4f) {
-            return play(
-                state,
-                hog,
-                CardCatalog.HOG_RIDER,
-                0.5f,
-                0.54f,
-                "Hog Rider attack."
-            );
+            float laneX = nextHogLeft ? 0.30f : 0.70f;
+            nextHogLeft = !nextHogLeft;
+
+            return play(state, hog, CardCatalog.HOG_RIDER,
+                laneX, 0.535f, "Hog Rider lane attack.");
         }
 
-        // Low-cost cycle cards, only when no detected threat exists.
-        if (!state.enemyThreatDetected) {
+        if (!state.enemyThreatDetected && state.ownElixir >= 8f) {
             int spirit = state.findCard(CardCatalog.ICE_SPIRIT);
-
             if (spirit >= 0 && state.ownElixir >= 1f) {
-                return play(
-                    state, spirit, CardCatalog.ICE_SPIRIT,
-                    0.5f, 0.62f, "Ice Spirit cycle."
-                );
+                return play(state, spirit, CardCatalog.ICE_SPIRIT,
+                    0.50f, 0.62f, "Ice Spirit cycle.");
             }
 
             int skeletons = state.findCard(CardCatalog.SKELETONS);
-
             if (skeletons >= 0 && state.ownElixir >= 1f) {
-                return play(
-                    state, skeletons, CardCatalog.SKELETONS,
-                    0.5f, 0.63f, "Skeletons cycle."
-                );
+                return play(state, skeletons, CardCatalog.SKELETONS,
+                    0.50f, 0.63f, "Skeletons cycle.");
             }
         }
 
-        return waitDecision("Čekanje boljeg poteza.");
+        return waitDecision("Cekanje boljeg poteza.");
     }
 
     private Decision chooseDefense(GameState state) {
-
-        // Ground-targeting building for ground threats.
-        if (!state.enemyTroopTargetsAir) {
-            int cannon = state.findCard(CardCatalog.CANNON);
-
-            if (cannon >= 0 && state.ownElixir >= 3f) {
-                return play(
-                    state, cannon, CardCatalog.CANNON,
-                    0.5f, 0.68f, "Cannon defense."
-                );
-            }
-        }
-
-        // Musketeer can target both ground and air.
         int musketeer = state.findCard(CardCatalog.MUSKETEER);
-
         if (musketeer >= 0 && state.ownElixir >= 4f) {
-            return play(
-                state, musketeer, CardCatalog.MUSKETEER,
-                state.enemyTroopX < 0.5f ? 0.35f : 0.65f,
-                0.72f,
-                "Musketeer defense."
-            );
-        }
-
-        if (!state.enemyTroopTargetsAir) {
-            int skeletons = state.findCard(CardCatalog.SKELETONS);
-
-            if (skeletons >= 0 && state.ownElixir >= 1f) {
-                return play(
-                    state, skeletons, CardCatalog.SKELETONS,
-                    state.enemyTroopX, 0.72f,
-                    "Skeletons defense."
-                );
-            }
-        }
-
-        int iceSpirit = state.findCard(CardCatalog.ICE_SPIRIT);
-
-        if (iceSpirit >= 0 && state.ownElixir >= 1f) {
-            return play(
-                state, iceSpirit, CardCatalog.ICE_SPIRIT,
-                state.enemyTroopX, 0.70f,
-                "Ice Spirit defense."
-            );
+            float x = state.enemyTroopX < 0.5f ? 0.35f : 0.65f;
+            return play(state, musketeer, CardCatalog.MUSKETEER,
+                x, 0.72f, "Musketeer defense.");
         }
 
         int iceGolem = state.findCard(CardCatalog.ICE_GOLEM);
-
         if (iceGolem >= 0 && state.ownElixir >= 2f) {
-            return play(
-                state, iceGolem, CardCatalog.ICE_GOLEM,
-                state.enemyTroopX, 0.75f,
-                "Ice Golem defense."
-            );
+            return play(state, iceGolem, CardCatalog.ICE_GOLEM,
+                state.enemyTroopX, 0.75f, "Ice Golem defense.");
+        }
+
+        int spirit = state.findCard(CardCatalog.ICE_SPIRIT);
+        if (spirit >= 0 && state.ownElixir >= 1f) {
+            return play(state, spirit, CardCatalog.ICE_SPIRIT,
+                state.enemyTroopX, 0.70f, "Ice Spirit defense.");
+        }
+
+        int skeletons = state.findCard(CardCatalog.SKELETONS);
+        if (skeletons >= 0 && state.ownElixir >= 1f) {
+            return play(state, skeletons, CardCatalog.SKELETONS,
+                state.enemyTroopX, 0.72f, "Skeletons defense.");
         }
 
         return null;
     }
 
-    private Decision play(
-        GameState state,
-        int index,
-        int cardId,
-        float x,
-        float y,
-        String reason
-    ) {
+    private Decision play(GameState state, int index, int cardId,
+                          float x, float y, String reason) {
         int cost = CardCatalog.cost(cardId);
 
-        if (index < 0 ||
-            cost < 0 ||
-            state.ownElixir < cost) {
+        if (index < 0 || cost < 0 || state.ownElixir < cost) {
             return waitDecision("Nedovoljno elixira.");
         }
 
-        return new Decision(
-            ActionType.PLAY_CARD,
-            index,
-            cardId,
-            x,
-            y,
-            reason
-        );
+        return new Decision(ActionType.PLAY_CARD, index, cardId,
+            x, y, reason);
     }
 
     private Decision waitDecision(String reason) {
-        return new Decision(
-            ActionType.WAIT,
-            -1,
-            CardCatalog.UNKNOWN,
-            0f,
-            0f,
-            reason
-        );
+        return new Decision(ActionType.WAIT, -1,
+            CardCatalog.UNKNOWN, 0f, 0f, reason);
     }
 }
