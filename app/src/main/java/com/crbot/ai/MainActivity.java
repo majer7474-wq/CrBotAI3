@@ -1,8 +1,6 @@
 package com.crbot.ai;
 
 import android.app.Activity;
-import android.app.ActivityOptions;
-import android.graphics.Rect;
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
@@ -63,13 +61,8 @@ public class MainActivity extends Activity {
         layout.addView(status);
 
 
-        Button openGame = new Button(this);
-        openGame.setText("OTVORI CLASH ROYALE ISPOD");
-        openGame.setOnClickListener(v -> openClashRoyaleAdjacent());
-        layout.addView(openGame);
-
         Button overlayButton = new Button(this);
-        overlayButton.setText("UKLJUČI FLOATING OVERLAY");
+        overlayButton.setText("1. UKLJUČI FLOATING OVERLAY");
         overlayButton.setOnClickListener(v -> {
             if (Build.VERSION.SDK_INT >= 23 &&
                 !Settings.canDrawOverlays(this)) {
@@ -91,19 +84,19 @@ public class MainActivity extends Activity {
 
 
         Button accessibility = new Button(this);
-        accessibility.setText("1. Uključi Accessibility");
+        accessibility.setText("2. UKLJUČI ACCESSIBILITY");
         accessibility.setOnClickListener(v ->
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         );
         layout.addView(accessibility);
 
         startButton = new Button(this);
-        startButton.setText("START VISION");
+        startButton.setText("3. START VISION");
         startButton.setOnClickListener(v -> startVision());
         layout.addView(startButton);
 
         battleStartButton = new Button(this);
-        battleStartButton.setText("BITKA POČELA - RESET ELIXIRA NA 5");
+        battleStartButton.setText("4. BITKA POČELA - RESET ELIXIRA NA 5");
         battleStartButton.setOnClickListener(v -> {
             VisionStatus.startBattle();
             refreshStatus();
@@ -111,7 +104,7 @@ public class MainActivity extends Activity {
         layout.addView(battleStartButton);
 
         stopButton = new Button(this);
-        stopButton.setText("STOP ALL");
+        stopButton.setText("5. STOP ALL");
         stopButton.setOnClickListener(v -> stopVision());
         layout.addView(stopButton);
 
@@ -150,38 +143,6 @@ public class MainActivity extends Activity {
         refreshStatus();
     }
 
-
-    private void openClashRoyaleAdjacent() {
-        Intent game = getPackageManager()
-            .getLaunchIntentForPackage("com.supercell.clashroyale");
-
-        if (game == null) {
-            Toast.makeText(this, "Clash Royale nije pronađen.",
-                Toast.LENGTH_LONG).show();
-            return;
-        }
-
-        game.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            game.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
-
-            int width = getResources().getDisplayMetrics().widthPixels;
-            int height = getResources().getDisplayMetrics().heightPixels;
-            Rect lowerArea = new Rect(0, (int)(height * 0.30f), width, height);
-
-            ActivityOptions options = ActivityOptions.makeBasic();
-            options.setLaunchBounds(lowerArea);
-
-            try {
-                startActivity(game, options.toBundle());
-            } catch (Exception e) {
-                startActivity(game);
-            }
-        } else {
-            startActivity(game);
-        }
-    }
 
     private void startVision() {
         if (ScreenCaptureService.isRunning()) {
