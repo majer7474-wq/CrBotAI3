@@ -1,6 +1,8 @@
 package com.crbot.ai;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
+import android.graphics.Rect;
 import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
@@ -13,6 +15,7 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.crbot.ai.automation.ScreenCaptureService;
 import com.crbot.ai.automation.BotRuntime;
@@ -57,6 +60,13 @@ public class MainActivity extends Activity {
         status.setTextSize(18);
         status.setPadding(0, 24, 0, 24);
         layout.addView(status);
+
+
+        Button openGame = new Button(this);
+        openGame.setText("OTVORI CLASH ROYALE ISPOD");
+        openGame.setOnClickListener(v -> openClashRoyaleAdjacent());
+        layout.addView(openGame);
+
 
         Button accessibility = new Button(this);
         accessibility.setText("1. Uključi Accessibility");
@@ -116,6 +126,39 @@ public class MainActivity extends Activity {
 
         setContentView(layout);
         refreshStatus();
+    }
+
+
+    private void openClashRoyaleAdjacent() {
+        Intent game = getPackageManager()
+            .getLaunchIntentForPackage("com.supercell.clashroyale");
+
+        if (game == null) {
+            Toast.makeText(this, "Clash Royale nije pronađen.",
+                Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        game.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            game.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT);
+
+            int width = getResources().getDisplayMetrics().widthPixels;
+            int height = getResources().getDisplayMetrics().heightPixels;
+            Rect lowerArea = new Rect(0, (int)(height * 0.30f), width, height);
+
+            ActivityOptions options = ActivityOptions.makeBasic();
+            options.setLaunchBounds(lowerArea);
+
+            try {
+                startActivity(game, options.toBundle());
+            } catch (Exception e) {
+                startActivity(game);
+            }
+        } else {
+            startActivity(game);
+        }
     }
 
     private void startVision() {
