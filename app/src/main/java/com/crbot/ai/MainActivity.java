@@ -82,21 +82,45 @@ public class MainActivity extends Activity {
         });
         layout.addView(overlayButton);
 
+        Button overlaySettings = new Button(this);
+        overlaySettings.setText("2. POSTAVKE OVERLAYA");
+        overlaySettings.setOnClickListener(v -> {
+            Intent i = new Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:" + getPackageName())
+            );
+            startActivity(i);
+        });
+        layout.addView(overlaySettings);
+
+
 
         Button accessibility = new Button(this);
-        accessibility.setText("2. UKLJUČI ACCESSIBILITY");
+        accessibility.setText("3. POSTAVKE ACCESSIBILITY");
         accessibility.setOnClickListener(v ->
             startActivity(new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         );
         layout.addView(accessibility);
 
+        Button appPermissions = new Button(this);
+        appPermissions.setText("4. DOZVOLE APLIKACIJE");
+        appPermissions.setOnClickListener(v -> {
+            Intent i = new Intent(
+                Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + getPackageName())
+            );
+            startActivity(i);
+        });
+        layout.addView(appPermissions);
+
+
         startButton = new Button(this);
-        startButton.setText("3. START VISION");
+        startButton.setText("5. START VISION");
         startButton.setOnClickListener(v -> startVision());
         layout.addView(startButton);
 
         battleStartButton = new Button(this);
-        battleStartButton.setText("4. BITKA POČELA - RESET ELIXIRA NA 5");
+        battleStartButton.setText("6. BITKA POČELA - RESET ELIXIRA NA 5");
         battleStartButton.setOnClickListener(v -> {
             VisionStatus.startBattle();
             refreshStatus();
@@ -104,7 +128,7 @@ public class MainActivity extends Activity {
         layout.addView(battleStartButton);
 
         stopButton = new Button(this);
-        stopButton.setText("5. STOP ALL");
+        stopButton.setText("7. STOP ALL");
         stopButton.setOnClickListener(v -> stopVision());
         layout.addView(stopButton);
 
