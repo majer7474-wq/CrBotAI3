@@ -151,7 +151,10 @@ public class FloatingOverlayService extends Service {
         });
         box.addView(toggle);
 
-
+        Button minimize = new Button(this);
+        minimize.setText("MINIMIZIRAJ");
+        minimize.setOnClickListener(v -> hidePanel());
+        box.addView(minimize);
 
         Button exit = new Button(this);
         exit.setText("STOP SVE");

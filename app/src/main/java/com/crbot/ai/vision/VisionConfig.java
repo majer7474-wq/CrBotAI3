@@ -11,8 +11,18 @@ public final class VisionConfig {
     public static final float ENEMY_DIVIDER = 0.43f;
     public static final float OWN_DIVIDER = 0.57f;
 
-    public static final float HAND_TOP = 0.79f;
-    public static final float HAND_BOTTOM = 0.99f;
+    public static final float HAND_TOP = 0.80f;
+    public static final float HAND_BOTTOM = 0.98f;
+
+    // Pozicije četiri karte u donjoj ruci.
+    public static final float HAND_CARD_LEFT = 0.25f;
+    public static final float HAND_CARD_WIDTH = 0.16f;
+    public static final float HAND_CARD_STEP = 0.17f;
+
+    // Središta karata za Accessibility drag.
+    public static final float[] HAND_CARD_TAP_X = {
+        0.33f, 0.50f, 0.67f, 0.84f
+    };
 
     // Donji lijevi dio ekrana, gdje se prikazuje eliksir.
     // Suzeno da se smanji hvatanje cijena karata.

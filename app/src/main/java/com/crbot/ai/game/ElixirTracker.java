@@ -6,7 +6,7 @@ public class ElixirTracker {
     private static final long DOUBLE_ELIXIR_AT_NS =
         120_000_000_000L;
     private static final long TRIPLE_ELIXIR_AT_NS =
-        240_000_000_000L;
+        150_000_000_000L;
 
     private static final float BASE_SECONDS_PER_ELIXIR = 2.8f;
 

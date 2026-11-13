@@ -81,12 +81,14 @@ public final class VisionStatus {
 
         // Automatsko prepoznavanje početka bitke.
         if (!battleStarted &&
-            state.handDetected &&
-            state.hasUsableHand() &&
             state.ocrElixirValue >= 0 &&
             state.ocrElixirValue <= 10) {
             elixirTracker.reset((float) state.ocrElixirValue);
-            lastStableHand = state.hand.clone();
+            if (state.handDetected && state.hasUsableHand()) {
+                lastStableHand = state.hand.clone();
+            } else {
+                lastStableHand = null;
+            }
             battleStarted = true;
             ownElixir = elixirTracker.getEstimate();
             elixirDetected = true;

@@ -257,9 +257,14 @@ public class ScreenCaptureService extends Service {
                     + " | reliable=" + state.visionReliable
                 );
 
-                VisionStatus.onFrame(state);
-                BotController.onFrame(state);
-                processing.set(false);
+                try {
+                    VisionStatus.onFrame(state);
+                    BotController.onFrame(state);
+                } catch (Exception callbackError) {
+                    Log.e(TAG, "Greska callback obrade framea.", callbackError);
+                } finally {
+                    processing.set(false);
+                }
             });
 
         } catch (Exception e) {

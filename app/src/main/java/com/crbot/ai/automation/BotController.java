@@ -12,8 +12,13 @@ public final class BotController {
     private static boolean waitingForHandChange = false;
     private static long lastPlayTime = 0L;
     private static final long PLAY_COOLDOWN_MS = 1500L;
+    private static final long HAND_CHANGE_TIMEOUT_MS = 2200L;
 
     private BotController() {}
+
+    private static long nowOrCurrentTime() {
+        return System.currentTimeMillis();
+    }
 
     public static synchronized void onFrame(GameState state) {
         if (!BotRuntime.isActive() ||
@@ -26,8 +31,15 @@ public final class BotController {
         }
 
         if (waitingForHandChange) {
-            if (Arrays.equals(lastPlayedHand, state.hand)) return;
-            waitingForHandChange = false;
+            if (!Arrays.equals(lastPlayedHand, state.hand)) {
+                waitingForHandChange = false;
+            } else if (nowOrCurrentTime() - lastPlayTime
+                    < HAND_CHANGE_TIMEOUT_MS) {
+                return;
+            } else {
+                // Igra nije registrirala potez: dopusti novi pokušaj.
+                waitingForHandChange = false;
+            }
         }
 
         long now = System.currentTimeMillis();

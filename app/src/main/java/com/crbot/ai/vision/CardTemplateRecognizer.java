@@ -50,20 +50,28 @@ public final class CardTemplateRecognizer {
     }
 
     private void load(AssetManager assets, int id, String file) {
+        Bitmap source = null;
+        Bitmap inner = null;
+        Bitmap scaled = null;
         try (InputStream input = assets.open("cards/" + file)) {
-            Bitmap source = BitmapFactory.decodeStream(input);
+            source = BitmapFactory.decodeStream(input);
             if (source == null) return;
 
-            Bitmap scaled = Bitmap.createScaledBitmap(
-                source, W, H, true
-            );
+            int ix = Math.round(source.getWidth() * 0.10f);
+            int iy = Math.round(source.getHeight() * 0.08f);
+            int w = source.getWidth() - ix * 2;
+            int h = source.getHeight() - iy * 2;
+            if (w < 8 || h < 8) return;
 
+            inner = Bitmap.createBitmap(source, ix, iy, w, h);
+            scaled = Bitmap.createScaledBitmap(inner, 48, 64, true);
             templates.put(id, describe(scaled));
-
-            if (scaled != source) scaled.recycle();
-            source.recycle();
-
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            android.util.Log.e("CrBotCards", "Predlozak nije ucitan: " + file, e);
+        } finally {
+            if (scaled != null && scaled != inner && !scaled.isRecycled()) scaled.recycle();
+            if (inner != null && inner != source && !inner.isRecycled()) inner.recycle();
+            if (source != null && !source.isRecycled()) source.recycle();
         }
     }
 
@@ -137,7 +145,7 @@ public final class CardTemplateRecognizer {
             : Math.max(0f, second - best);
 
         // Konzervativno: ne pogađaj kartu ako rezultat nije jasan.
-        if (confidence < 0.28f || margin < 0.012f) {
+        if (confidence < 0.22f || margin < 0.0015f) {
             bestId = CardCatalog.UNKNOWN;
         }
 

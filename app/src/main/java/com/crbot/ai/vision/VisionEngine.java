@@ -377,8 +377,9 @@ public class VisionEngine {
         int[] detected = new int[4];
 
         for (int card = 0; card < 4; card++) {
-            float left = 0.05f + card * 0.225f;
-            float right = left + 0.19f;
+            float left = VisionConfig.HAND_CARD_LEFT
+                + card * VisionConfig.HAND_CARD_STEP;
+            float right = left + VisionConfig.HAND_CARD_WIDTH;
 
             int x1 = Math.max(0, (int) (width * left));
             int x2 = Math.min(width, (int) (width * right));
