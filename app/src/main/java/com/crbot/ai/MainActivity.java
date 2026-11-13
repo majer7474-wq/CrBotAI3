@@ -29,6 +29,8 @@ public class MainActivity extends Activity {
     private Button startButton;
     private Button stopButton;
     private Button battleStartButton;
+    private Button stopAutoplayButton;
+    private Button autoplayButton;
     private TextView visionDetails;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Runnable statusTicker = new Runnable() {
@@ -127,8 +129,30 @@ public class MainActivity extends Activity {
         });
         layout.addView(battleStartButton);
 
+        autoplayButton = new Button(this);
+        autoplayButton.setText("7. UKLJUČI AUTOPLAY");
+        autoplayButton.setOnClickListener(v -> {
+            if (!ScreenCaptureService.isRunning() || !BotRuntime.isActive()) {
+                Toast.makeText(this, "Prvo pokreni START VISION.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            BotRuntime.enableAutomation();
+            refreshStatus();
+            Toast.makeText(this, "AUTOPLAY UKLJUČEN", Toast.LENGTH_SHORT).show();
+        });
+        layout.addView(autoplayButton);
+
+        stopAutoplayButton = new Button(this);
+        stopAutoplayButton.setText("8. ISKLJUČI AUTOPLAY");
+        stopAutoplayButton.setOnClickListener(v -> {
+            BotRuntime.disableAutomation();
+            refreshStatus();
+            Toast.makeText(this, "AUTOPLAY ISKLJUČEN", Toast.LENGTH_SHORT).show();
+        });
+        layout.addView(stopAutoplayButton);
+
         stopButton = new Button(this);
-        stopButton.setText("7. STOP ALL");
+        stopButton.setText("9. STOP ALL");
         stopButton.setOnClickListener(v -> stopVision());
         layout.addView(stopButton);
 
@@ -210,6 +234,12 @@ public class MainActivity extends Activity {
 
         if (battleStartButton != null) {
             battleStartButton.setEnabled(running);
+        }
+        if (autoplayButton != null) {
+            autoplayButton.setEnabled(running && !BotRuntime.isAutomationEnabled());
+        }
+        if (stopAutoplayButton != null) {
+            stopAutoplayButton.setEnabled(BotRuntime.isAutomationEnabled());
         }
     }
 

@@ -15,7 +15,6 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import com.crbot.ai.game.CardCatalog;
 
 public class FloatingOverlayService extends Service {
     private WindowManager wm;
@@ -131,30 +130,6 @@ public class FloatingOverlayService extends Service {
             LinearLayout.LayoutParams.MATCH_PARENT, dp(300)
         ));
 
-        TextView cardTitle = new TextView(this);
-        cardTitle.setText("RUČNO ODUZMI ELIXIR - nakon odigrane karte:");
-        cardTitle.setTextColor(Color.WHITE);
-        cardTitle.setTextSize(12);
-        box.addView(cardTitle);
-
-        LinearLayout row1 = new LinearLayout(this);
-        row1.setOrientation(LinearLayout.HORIZONTAL);
-        box.addView(row1);
-
-        addCardButton(row1, "Hog 4", CardCatalog.HOG_RIDER);
-        addCardButton(row1, "Musk 4", CardCatalog.MUSKETEER);
-        addCardButton(row1, "Golem 2", CardCatalog.ICE_GOLEM);
-        addCardButton(row1, "Spirit 1", CardCatalog.ICE_SPIRIT);
-
-        LinearLayout row2 = new LinearLayout(this);
-        row2.setOrientation(LinearLayout.HORIZONTAL);
-        box.addView(row2);
-
-        addCardButton(row2, "Skel 1", CardCatalog.SKELETONS);
-        addCardButton(row2, "Cannon 3", CardCatalog.CANNON);
-        addCardButton(row2, "Fireball 4", CardCatalog.FIREBALL);
-        addCardButton(row2, "Log 2", CardCatalog.THE_LOG);
-
         Button start = new Button(this);
         start.setText("1. START BOT");
         start.setOnClickListener(v -> {
@@ -202,30 +177,6 @@ public class FloatingOverlayService extends Service {
         lp.x = dp(12);
         lp.y = dp(24);
         wm.addView(panel, lp);
-    }
-
-    private void addCardButton(
-        LinearLayout row,
-        String label,
-        int cardId
-    ) {
-        Button button = new Button(this);
-        button.setText(label);
-        button.setTextSize(10);
-        button.setOnClickListener(v -> {
-            VisionStatus.onCardPlayed(cardId);
-            if (report != null) {
-                report.setText(VisionStatus.getReport());
-            }
-        });
-
-        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-            0,
-            LinearLayout.LayoutParams.WRAP_CONTENT,
-            1f
-        );
-        lp.setMargins(dp(1), dp(1), dp(1), dp(1));
-        row.addView(button, lp);
     }
 
     private void hidePanel() {

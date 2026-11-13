@@ -40,6 +40,13 @@ public final class BotRuntime {
         }
     }
 
+    public static void disableAutomation() {
+        synchronized (LOCK) {
+            automationEnabled = false;
+            BotController.reset();
+        }
+    }
+
     public static void registerStopAction(Runnable action) {
         if (action != null) {
             STOP_ACTIONS.addIfAbsent(action);
