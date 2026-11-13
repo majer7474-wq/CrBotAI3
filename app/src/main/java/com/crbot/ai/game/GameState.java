@@ -23,6 +23,7 @@ public class GameState {
     public boolean elixirDetected = false;
     public boolean ocrCompleted = false;
     public String ocrErrorMessage = "";
+    public String rawElixirOcr = "";
     public boolean handDetected = false;
 
     public boolean enemyTroopDetected = false;

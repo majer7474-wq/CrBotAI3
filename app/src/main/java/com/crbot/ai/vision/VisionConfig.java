@@ -14,9 +14,11 @@ public final class VisionConfig {
     public static final float HAND_TOP = 0.79f;
     public static final float HAND_BOTTOM = 0.99f;
 
+    // Donji lijevi dio ekrana, gdje se prikazuje eliksir.
+    // Suzeno da se smanji hvatanje cijena karata.
     public static final float ELIXIR_LEFT = 0.00f;
     public static final float ELIXIR_RIGHT = 0.24f;
-    public static final float ELIXIR_TOP = 0.82f;
+    public static final float ELIXIR_TOP = 0.88f;
     public static final float ELIXIR_BOTTOM = 0.99f;
 
     public static final int SAMPLE_WIDTH = 64;

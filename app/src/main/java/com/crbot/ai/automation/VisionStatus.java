@@ -31,6 +31,7 @@ public final class VisionStatus {
         ownMotion = 0f;
         visionReliable = false;
         lastError = "Nema zabilježene greške.";
+        rawElixirOcr = "Nema OCR podataka.";
     }
 
     public static synchronized void onCaptureStopped() {
@@ -62,6 +63,7 @@ public final class VisionStatus {
         }
 
         ownElixir = state.ownElixir;
+        rawElixirOcr = state.rawElixirOcr == null ? "" : state.rawElixirOcr;
         elixirDetected = state.elixirDetected;
         enemyMotion = state.enemyMotion;
         ownMotion = state.ownMotion;

@@ -6,15 +6,12 @@ import android.graphics.Rect;
 import android.util.Log;
 
 import com.crbot.ai.game.GameState;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.mlkit.vision.common.InputImage;
 import com.google.mlkit.vision.text.Text;
 import com.google.mlkit.vision.text.TextRecognition;
 import com.google.mlkit.vision.text.TextRecognizer;
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions;
 
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class VisionEngine {
@@ -29,7 +26,19 @@ public class VisionEngine {
     private byte[] previousPixels;
     private volatile GameState latestState = new GameState();
 
-    private long[] previousCards = new long[4];
+    private final long[] previousCards = new long[4];
+
+    // Stabilizacija OCR rezultata.
+    private int pendingElixir = -1;
+    private int pendingCount = 0;
+    private int acceptedElixir = -1;
+    private long acceptedElixirTime = 0;
+
+    private static final int OCR_SCALE = 3;
+    private static final int REQUIRED_STABLE_READS = 3;
+
+    private static final Pattern ELIXIR_PATTERN =
+        Pattern.compile("^(10|[0-9])$");
 
     public GameState getLatestState() {
         return latestState;
@@ -41,6 +50,7 @@ public class VisionEngine {
         }
 
         GameState state = new GameState();
+        Bitmap crop = null;
         Bitmap ocrFrame = null;
 
         try {
@@ -61,29 +71,52 @@ public class VisionEngine {
 
             if (right <= left || bottom <= top) {
                 throw new IllegalArgumentException(
-                    "Neispravno OCR područje eliksira"
+                    "Neispravno OCR podrucje eliksira"
                 );
             }
 
-            ocrFrame = Bitmap.createBitmap(
+            crop = Bitmap.createBitmap(
                 frame, left, top, right - left, bottom - top
             );
 
+            ocrFrame = Bitmap.createScaledBitmap(
+                crop,
+                crop.getWidth() * OCR_SCALE,
+                crop.getHeight() * OCR_SCALE,
+                true
+            );
+
+            if (crop != ocrFrame && !crop.isRecycled()) {
+                crop.recycle();
+            }
+            crop = null;
+
             InputImage image = InputImage.fromBitmap(ocrFrame, 0);
             final Bitmap finalOcrFrame = ocrFrame;
+            final int ocrWidth = ocrFrame.getWidth();
+            final int ocrHeight = ocrFrame.getHeight();
 
             recognizer.process(image)
-                .addOnSuccessListener(text -> {
+                .addOnSuccessListener(result -> {
                     try {
                         state.ocrCompleted = true;
                         state.ocrErrorMessage = "";
-                        readText(text, state);
+
+                        readText(
+                            result,
+                            state,
+                            ocrWidth,
+                            ocrHeight
+                        );
+
                         state.lastUpdate = System.currentTimeMillis();
                         latestState = state;
 
                         if (callback != null) {
                             callback.onResult(state);
                         }
+                    } catch (Exception e) {
+                        Log.e("CrBotVision", "OCR result error", e);
                     } finally {
                         if (!finalOcrFrame.isRecycled()) {
                             finalOcrFrame.recycle();
@@ -125,7 +158,7 @@ public class VisionEngine {
 
             state.ocrCompleted = false;
             state.ocrErrorMessage = e.getMessage() == null
-                ? "Greška obrade slike"
+                ? "Greska obrade slike"
                 : e.getMessage();
 
             state.visionReliable = false;
@@ -136,6 +169,9 @@ public class VisionEngine {
                 callback.onResult(state);
             }
 
+            if (crop != null && !crop.isRecycled()) {
+                crop.recycle();
+            }
             if (ocrFrame != null && !ocrFrame.isRecycled()) {
                 ocrFrame.recycle();
             }
@@ -145,37 +181,116 @@ public class VisionEngine {
         }
     }
 
-    private void readText(Text result, GameState state) {
-        StringBuilder allText = new StringBuilder();
+    private void readText(
+        Text result,
+        GameState state,
+        int imageWidth,
+        int imageHeight
+    ) {
+        StringBuilder debug = new StringBuilder();
+        int bestCandidate = -1;
+        double bestScore = Double.MAX_VALUE;
 
         for (Text.TextBlock block : result.getTextBlocks()) {
-            allText.append(block.getText()).append(" ");
-        }
+            for (Text.Line line : block.getLines()) {
+                for (Text.Element element : line.getElements()) {
 
-        String text = allText.toString();
+                    String value = element.getText().trim();
+                    Rect box = element.getBoundingBox();
 
-        // OCR may see other numbers too. Only accept an
-        // isolated value from 0 to 10 as a preliminary estimate.
-        Pattern pattern = Pattern.compile(
-            "(?<!\\d)(10|[0-9])(?!\\d)"
-        );
+                    if (debug.length() < 700) {
+                        debug.append(value);
 
-        Matcher matcher = pattern.matcher(text);
+                        if (box != null) {
+                            debug.append("@[")
+                                .append(box.left).append(",")
+                                .append(box.top).append(",")
+                                .append(box.right).append(",")
+                                .append(box.bottom).append("]");
+                        }
 
-        while (matcher.find()) {
-            try {
-                int value = Integer.parseInt(matcher.group(1));
+                        debug.append(" ");
+                    }
 
-                if (value >= 0 && value <= 10) {
-                    state.ownElixir = value;
-                    state.elixirDetected = true;
+                    // Prihvacamo samo element koji je tocno broj.
+                    if (!ELIXIR_PATTERN.matcher(value).matches()) {
+                        continue;
+                    }
+
+                    if (box == null || imageWidth <= 0 || imageHeight <= 0) {
+                        continue;
+                    }
+
+                    float centerX =
+                        ((box.left + box.right) / 2f) / imageWidth;
+
+                    float centerY =
+                        ((box.top + box.bottom) / 2f) / imageHeight;
+
+                    float boxHeight =
+                        (box.bottom - box.top) / (float) imageHeight;
+
+                    // Odbaci elemente izvan ocekivanog podrucja.
+                    if (centerX < 0.03f || centerX > 0.97f ||
+                        centerY < 0.08f || centerY > 0.98f ||
+                        boxHeight < 0.025f || boxHeight > 0.95f) {
+                        continue;
+                    }
+
+                    int number = Integer.parseInt(value);
+
+                    // Prednost daje broju u donjem lijevom dijelu izreza.
+                    double score =
+                        Math.abs(centerX - 0.42f) +
+                        Math.abs(centerY - 0.70f) * 0.8;
+
+                    if (score < bestScore) {
+                        bestScore = score;
+                        bestCandidate = number;
+                    }
                 }
-            } catch (NumberFormatException ignored) {
             }
         }
 
-        // OCR alone is not sufficient to confirm the whole arena.
+        state.rawElixirOcr = debug.toString();
+
+        if (bestCandidate >= 0) {
+            if (bestCandidate == pendingElixir) {
+                pendingCount++;
+            } else {
+                pendingElixir = bestCandidate;
+                pendingCount = 1;
+            }
+
+            if (pendingCount >= REQUIRED_STABLE_READS) {
+                acceptedElixir = bestCandidate;
+                acceptedElixirTime = System.currentTimeMillis();
+            }
+        } else {
+            pendingElixir = -1;
+            pendingCount = 0;
+        }
+
+        long age = System.currentTimeMillis() - acceptedElixirTime;
+
+        // Ne prikazuj staro ocitanje kao da je aktualno.
+        if (acceptedElixir >= 0 && age <= 2000) {
+            state.ownElixir = acceptedElixir;
+            state.elixirDetected = true;
+        } else {
+            state.ownElixir = -1;
+            state.elixirDetected = false;
+        }
+
         state.visionReliable = false;
+
+        Log.d(
+            "CrBotVision",
+            "OCR raw=" + state.rawElixirOcr +
+            " candidate=" + bestCandidate +
+            " stable=" + pendingCount +
+            " accepted=" + acceptedElixir
+        );
     }
 
     private void calculateMotion(Bitmap frame, GameState state) {
