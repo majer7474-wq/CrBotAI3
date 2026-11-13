@@ -11,6 +11,7 @@ import android.os.Handler;
 import android.os.Looper;
 import android.widget.ScrollView;
 import android.provider.Settings;
+import android.net.Uri;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -66,6 +67,27 @@ public class MainActivity extends Activity {
         openGame.setText("OTVORI CLASH ROYALE ISPOD");
         openGame.setOnClickListener(v -> openClashRoyaleAdjacent());
         layout.addView(openGame);
+
+        Button overlayButton = new Button(this);
+        overlayButton.setText("UKLJUČI FLOATING OVERLAY");
+        overlayButton.setOnClickListener(v -> {
+            if (Build.VERSION.SDK_INT >= 23 &&
+                !Settings.canDrawOverlays(this)) {
+                Intent permission = new Intent(
+                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                    Uri.parse("package:" + getPackageName())
+                );
+                startActivity(permission);
+            } else {
+                Intent overlay = new Intent(
+                    this,
+                    com.crbot.ai.automation.FloatingOverlayService.class
+                );
+                startService(overlay);
+                Toast.makeText(this, "Overlay aktiviran", Toast.LENGTH_SHORT).show();
+            }
+        });
+        layout.addView(overlayButton);
 
 
         Button accessibility = new Button(this);
