@@ -271,17 +271,10 @@ public class VisionEngine {
             pendingCount = 0;
         }
 
-        long age = System.currentTimeMillis() - acceptedElixirTime;
-
-        // Ne prikazuj staro ocitanje kao da je aktualno.
-        if (acceptedElixir >= 0 && age <= 1300) {
-            state.ownElixir = acceptedElixir;
-            state.elixirDetected = true;
-        } else {
-            state.ownElixir = -1;
-            state.elixirDetected = false;
-        }
-
+        // OCR brojevi nisu pouzdan izvor eliksira.
+        // ElixirTracker u VisionStatus vodi procjenu.
+        state.ownElixir = -1;
+        state.elixirDetected = false;
         state.visionReliable = false;
 
         Log.d(

@@ -26,6 +26,7 @@ public class MainActivity extends Activity {
     private TextView status;
     private Button startButton;
     private Button stopButton;
+    private Button battleStartButton;
     private TextView visionDetails;
     private final Handler uiHandler = new Handler(Looper.getMainLooper());
     private final Runnable statusTicker = new Runnable() {
@@ -68,6 +69,14 @@ public class MainActivity extends Activity {
         startButton.setText("START VISION");
         startButton.setOnClickListener(v -> startVision());
         layout.addView(startButton);
+
+        battleStartButton = new Button(this);
+        battleStartButton.setText("BITKA POČELA - RESET ELIXIRA NA 5");
+        battleStartButton.setOnClickListener(v -> {
+            VisionStatus.startBattle();
+            refreshStatus();
+        });
+        layout.addView(battleStartButton);
 
         stopButton = new Button(this);
         stopButton.setText("STOP ALL");
@@ -147,6 +156,10 @@ public class MainActivity extends Activity {
 
         if (stopButton != null) {
             stopButton.setEnabled(running);
+        }
+
+        if (battleStartButton != null) {
+            battleStartButton.setEnabled(running);
         }
     }
 
