@@ -21,6 +21,8 @@ public class GameState {
     public boolean enemyThreatDetected = false;
     public boolean visionReliable = false;
     public boolean elixirDetected = false;
+    public boolean ocrCompleted = false;
+    public String ocrErrorMessage = "";
     public boolean handDetected = false;
 
     public boolean enemyTroopDetected = false;

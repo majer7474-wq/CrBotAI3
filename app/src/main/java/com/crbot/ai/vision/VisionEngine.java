@@ -41,46 +41,108 @@ public class VisionEngine {
         }
 
         GameState state = new GameState();
+        Bitmap ocrFrame = null;
 
         try {
             calculateMotion(frame, state);
             calculateCardFingerprints(frame, state);
+
+            int width = frame.getWidth();
+            int height = frame.getHeight();
+
+            int left = Math.max(0,
+                (int) (width * VisionConfig.ELIXIR_LEFT));
+            int top = Math.max(0,
+                (int) (height * VisionConfig.ELIXIR_TOP));
+            int right = Math.min(width,
+                (int) (width * VisionConfig.ELIXIR_RIGHT));
+            int bottom = Math.min(height,
+                (int) (height * VisionConfig.ELIXIR_BOTTOM));
+
+            if (right <= left || bottom <= top) {
+                throw new IllegalArgumentException(
+                    "Neispravno OCR područje eliksira"
+                );
+            }
+
+            ocrFrame = Bitmap.createBitmap(
+                frame, left, top, right - left, bottom - top
+            );
+
+            InputImage image = InputImage.fromBitmap(ocrFrame, 0);
+            final Bitmap finalOcrFrame = ocrFrame;
+
+            recognizer.process(image)
+                .addOnSuccessListener(text -> {
+                    try {
+                        state.ocrCompleted = true;
+                        state.ocrErrorMessage = "";
+                        readText(text, state);
+                        state.lastUpdate = System.currentTimeMillis();
+                        latestState = state;
+
+                        if (callback != null) {
+                            callback.onResult(state);
+                        }
+                    } finally {
+                        if (!finalOcrFrame.isRecycled()) {
+                            finalOcrFrame.recycle();
+                        }
+                        if (!frame.isRecycled()) {
+                            frame.recycle();
+                        }
+                    }
+                })
+                .addOnFailureListener(error -> {
+                    try {
+                        Log.e("CrBotVision", "OCR error", error);
+
+                        state.ocrCompleted = false;
+                        state.ocrErrorMessage =
+                            error.getMessage() == null
+                                ? "OCR obrada nije uspjela"
+                                : error.getMessage();
+
+                        state.visionReliable = false;
+                        state.lastUpdate = System.currentTimeMillis();
+                        latestState = state;
+
+                        if (callback != null) {
+                            callback.onResult(state);
+                        }
+                    } finally {
+                        if (!finalOcrFrame.isRecycled()) {
+                            finalOcrFrame.recycle();
+                        }
+                        if (!frame.isRecycled()) {
+                            frame.recycle();
+                        }
+                    }
+                });
+
         } catch (Exception e) {
             Log.e("CrBotVision", "Image analysis error", e);
+
+            state.ocrCompleted = false;
+            state.ocrErrorMessage = e.getMessage() == null
+                ? "Greška obrade slike"
+                : e.getMessage();
+
+            state.visionReliable = false;
+            state.lastUpdate = System.currentTimeMillis();
+            latestState = state;
+
+            if (callback != null) {
+                callback.onResult(state);
+            }
+
+            if (ocrFrame != null && !ocrFrame.isRecycled()) {
+                ocrFrame.recycle();
+            }
+            if (!frame.isRecycled()) {
+                frame.recycle();
+            }
         }
-
-        InputImage image = InputImage.fromBitmap(frame, 0);
-
-        recognizer.process(image)
-            .addOnSuccessListener(text -> {
-                try {
-                    readText(text, state);
-                    state.lastUpdate = System.currentTimeMillis();
-                    latestState = state;
-
-                    if (callback != null) {
-                        callback.onResult(state);
-                    }
-                } finally {
-                    if (!frame.isRecycled()) {
-                        frame.recycle();
-                    }
-                }
-            })
-            .addOnFailureListener(error -> {
-                Log.e("CrBotVision", "OCR error", error);
-
-                state.visionReliable = false;
-                latestState = state;
-
-                if (callback != null) {
-                    callback.onResult(state);
-                }
-
-                if (!frame.isRecycled()) {
-                    frame.recycle();
-                }
-            });
     }
 
     private void readText(Text result, GameState state) {

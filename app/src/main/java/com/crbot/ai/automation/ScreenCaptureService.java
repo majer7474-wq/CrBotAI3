@@ -179,10 +179,12 @@ public class ScreenCaptureService extends Service {
             );
 
             running = true;
+            VisionStatus.onCaptureStarted();
             Log.i(TAG, "Screen capture pokrenut.");
 
         } catch (Exception e) {
             Log.e(TAG, "Pokretanje capture sustava nije uspjelo.", e);
+            VisionStatus.onCaptureError(e);
             stopCapture();
             stopSelf();
         }
@@ -254,11 +256,13 @@ public class ScreenCaptureService extends Service {
                     + " | reliable=" + state.visionReliable
                 );
 
+                VisionStatus.onFrame(state);
                 processing.set(false);
             });
 
         } catch (Exception e) {
             Log.e(TAG, "Greška kod obrade framea.", e);
+            VisionStatus.onCaptureError(e);
             processing.set(false);
 
         } finally {
@@ -291,6 +295,7 @@ public class ScreenCaptureService extends Service {
 
     private void stopCapture() {
         running = false;
+        VisionStatus.onCaptureStopped();
 
         if (reader != null) {
             reader.setOnImageAvailableListener(null, null);

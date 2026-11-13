@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.media.projection.MediaProjectionManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import android.widget.ScrollView;
 import android.provider.Settings;
 import android.view.View;
 import android.widget.Button;
@@ -13,6 +16,7 @@ import android.widget.TextView;
 
 import com.crbot.ai.automation.ScreenCaptureService;
 import com.crbot.ai.automation.BotRuntime;
+import com.crbot.ai.automation.VisionStatus;
 
 public class MainActivity extends Activity {
 
@@ -22,6 +26,15 @@ public class MainActivity extends Activity {
     private TextView status;
     private Button startButton;
     private Button stopButton;
+    private TextView visionDetails;
+    private final Handler uiHandler = new Handler(Looper.getMainLooper());
+    private final Runnable statusTicker = new Runnable() {
+        @Override
+        public void run() {
+            refreshStatus();
+            uiHandler.postDelayed(this, 1000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle state) {
@@ -60,6 +73,29 @@ public class MainActivity extends Activity {
         stopButton.setText("STOP ALL");
         stopButton.setOnClickListener(v -> stopVision());
         layout.addView(stopButton);
+
+        TextView panelTitle = new TextView(this);
+        panelTitle.setText("\\nPODACI O OBRADI");
+        panelTitle.setTextSize(18);
+        panelTitle.setPadding(0, 20, 0, 8);
+        layout.addView(panelTitle);
+
+        visionDetails = new TextView(this);
+        visionDetails.setTextSize(14);
+        visionDetails.setTextIsSelectable(true);
+        visionDetails.setPadding(12, 12, 12, 12);
+
+        ScrollView detailsScroll = new ScrollView(this);
+        detailsScroll.addView(visionDetails);
+
+        layout.addView(
+            detailsScroll,
+            new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
+        );
 
         TextView info = new TextView(this);
         info.setText(
@@ -101,6 +137,10 @@ public class MainActivity extends Activity {
             );
         }
 
+        if (visionDetails != null) {
+            visionDetails.setText(VisionStatus.getReport());
+        }
+
         if (startButton != null) {
             startButton.setEnabled(!running);
         }
@@ -114,6 +154,14 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         refreshStatus();
+        uiHandler.removeCallbacks(statusTicker);
+        uiHandler.post(statusTicker);
+    }
+
+    @Override
+    protected void onPause() {
+        uiHandler.removeCallbacks(statusTicker);
+        super.onPause();
     }
 
     @Override
