@@ -16,6 +16,7 @@ public final class VisionStatus {
     private static float ownMotion = 0f;
     private static boolean visionReliable = false;
     private static String lastError = "Nema zabilježene greške.";
+    private static String rawElixirOcr = "Nema OCR podataka.";
 
     private VisionStatus() {}
 
@@ -105,6 +106,9 @@ public final class VisionStatus {
         }
 
         out.append("\n");
+
+        out.append("Sirovi OCR eliksira: ")
+            .append(rawElixirOcr).append("\n\n");
 
         out.append("Kretanje protivnika: ")
             .append(Math.round(enemyMotion * 100))
