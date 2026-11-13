@@ -81,12 +81,12 @@ public class ScreenCaptureService extends Service {
 
         return new Notification.Builder(this, CHANNEL_ID)
             .setContentTitle("CrBot AI 3.0")
-            .setContentText("Vision sustav je aktivan")
+            .setContentText("CrBot sesija je aktivna")
             .setSmallIcon(android.R.drawable.ic_menu_view)
             .setOngoing(true)
             .addAction(
                 android.R.drawable.ic_media_pause,
-                "STOP VISION",
+                "STOP ALL",
                 stopPendingIntent
             )
             .build();
@@ -96,7 +96,7 @@ public class ScreenCaptureService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
 
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
-            stopCapture();
+            BotRuntime.stopAll(this);
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -314,6 +314,7 @@ public class ScreenCaptureService extends Service {
 
     @Override
     public void onDestroy() {
+        BotRuntime.deactivate();
         stopCapture();
 
         vision.close();

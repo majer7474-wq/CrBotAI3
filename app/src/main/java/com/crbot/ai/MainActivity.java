@@ -12,6 +12,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.crbot.ai.automation.ScreenCaptureService;
+import com.crbot.ai.automation.BotRuntime;
 
 public class MainActivity extends Activity {
 
@@ -56,7 +57,7 @@ public class MainActivity extends Activity {
         layout.addView(startButton);
 
         stopButton = new Button(this);
-        stopButton.setText("STOP VISION");
+        stopButton.setText("STOP ALL");
         stopButton.setOnClickListener(v -> stopVision());
         layout.addView(stopButton);
 
@@ -85,13 +86,8 @@ public class MainActivity extends Activity {
     }
 
     private void stopVision() {
-        Intent stopIntent = new Intent(this, ScreenCaptureService.class);
-        stopIntent.setAction(ScreenCaptureService.ACTION_STOP);
-        startService(stopIntent);
-
-        stopService(new Intent(this, ScreenCaptureService.class));
-
-        status.setText("Status: zaustavljanje...");
+        BotRuntime.stopAll(this);
+        status.setText("Status: SVE ZAUSTAVLJENO");
         refreshStatus();
     }
 
@@ -133,10 +129,13 @@ public class MainActivity extends Activity {
         }
 
         if (resultCode != RESULT_OK || data == null) {
+            BotRuntime.stopAll(this);
             status.setText("Status: dozvola nije odobrena");
             refreshStatus();
             return;
         }
+
+        BotRuntime.startSession();
 
         Intent service = new Intent(this, ScreenCaptureService.class);
         service.putExtra("resultCode", resultCode);

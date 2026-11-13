@@ -7,7 +7,7 @@ import android.view.accessibility.AccessibilityEvent;
 
 public class BotAccessibilityService extends AccessibilityService {
 
-    private static BotAccessibilityService instance;
+    private static volatile BotAccessibilityService instance;
 
     @Override
     protected void onServiceConnected() {
@@ -28,23 +28,26 @@ public class BotAccessibilityService extends AccessibilityService {
     }
 
     public static void tap(float normalizedX, float normalizedY) {
-        if (instance == null) return;
+        BotRuntime.runIfAutomationEnabled(() -> {
+            BotAccessibilityService current = instance;
+            if (current == null) return;
 
-        float x = normalizedX * instance.getResources()
-            .getDisplayMetrics().widthPixels;
-        float y = normalizedY * instance.getResources()
-            .getDisplayMetrics().heightPixels;
+            float x = normalizedX * current.getResources()
+                .getDisplayMetrics().widthPixels;
+            float y = normalizedY * current.getResources()
+                .getDisplayMetrics().heightPixels;
 
-        Path path = new Path();
-        path.moveTo(x, y);
+            Path path = new Path();
+            path.moveTo(x, y);
 
-        GestureDescription gesture =
-            new GestureDescription.Builder()
-                .addStroke(new GestureDescription.StrokeDescription(
-                    path, 0, 80
-                ))
-                .build();
+            GestureDescription gesture =
+                new GestureDescription.Builder()
+                    .addStroke(new GestureDescription.StrokeDescription(
+                        path, 0, 80
+                    ))
+                    .build();
 
-        instance.dispatchGesture(gesture, null, null);
+            current.dispatchGesture(gesture, null, null);
+        });
     }
 }
