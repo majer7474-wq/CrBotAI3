@@ -2,6 +2,7 @@ package com.crbot.ai.automation;
 
 import android.app.*;
 import android.content.*;
+import android.content.pm.ServiceInfo;
 import android.graphics.*;
 import android.hardware.display.*;
 import android.media.*;
@@ -9,7 +10,6 @@ import android.media.projection.*;
 import android.os.*;
 import android.util.Log;
 
-import com.crbot.ai.game.GameState;
 import com.crbot.ai.vision.VisionEngine;
 
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -17,7 +17,18 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class ScreenCaptureService extends Service {
 
+    public static final String ACTION_STOP =
+        "com.crbot.ai.action.STOP_VISION";
+
     private static final String TAG = "CrBotCapture";
+    private static final String CHANNEL_ID = "crbot";
+    private static final int NOTIFICATION_ID = 10;
+
+    private static volatile boolean running = false;
+
+    public static boolean isRunning() {
+        return running;
+    }
 
     private MediaProjection projection;
     private VirtualDisplay display;
@@ -38,23 +49,58 @@ public class ScreenCaptureService extends Service {
         super.onCreate();
 
         createNotificationChannel();
-
-        Notification notification =
-            new Notification.Builder(this, "crbot")
-                .setContentTitle("CrBot AI 3.0")
-                .setContentText("Vision sustav je aktivan")
-                .setSmallIcon(android.R.drawable.ic_menu_view)
-                .build();
-
-        startForeground(10, notification);
+        startForegroundCompat(createNotification());
 
         captureThread = new HandlerThread("CrBotCaptureThread");
         captureThread.start();
         captureHandler = new Handler(captureThread.getLooper());
     }
 
+    private void startForegroundCompat(Notification notification) {
+        if (Build.VERSION.SDK_INT >= 29) {
+            startForeground(
+                NOTIFICATION_ID,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION
+            );
+        } else {
+            startForeground(NOTIFICATION_ID, notification);
+        }
+    }
+
+    private Notification createNotification() {
+        Intent stopIntent = new Intent(this, ScreenCaptureService.class);
+        stopIntent.setAction(ACTION_STOP);
+
+        PendingIntent stopPendingIntent = PendingIntent.getService(
+            this,
+            101,
+            stopIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+        );
+
+        return new Notification.Builder(this, CHANNEL_ID)
+            .setContentTitle("CrBot AI 3.0")
+            .setContentText("Vision sustav je aktivan")
+            .setSmallIcon(android.R.drawable.ic_menu_view)
+            .setOngoing(true)
+            .addAction(
+                android.R.drawable.ic_media_pause,
+                "STOP VISION",
+                stopPendingIntent
+            )
+            .build();
+    }
+
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
+        if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            stopCapture();
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+
         if (intent == null || projection != null) {
             return START_NOT_STICKY;
         }
@@ -64,7 +110,8 @@ public class ScreenCaptureService extends Service {
         Intent data;
         if (Build.VERSION.SDK_INT >= 33) {
             data = intent.getParcelableExtra(
-                "projectionData", Intent.class
+                "projectionData",
+                Intent.class
             );
         } else {
             data = intent.getParcelableExtra("projectionData");
@@ -88,6 +135,18 @@ public class ScreenCaptureService extends Service {
                 stopSelf();
                 return START_NOT_STICKY;
             }
+
+            projection.registerCallback(
+                new MediaProjection.Callback() {
+                    @Override
+                    public void onStop() {
+                        Log.i(TAG, "MediaProjection zaustavljena.");
+                        stopCapture();
+                        stopSelf();
+                    }
+                },
+                new Handler(Looper.getMainLooper())
+            );
 
             int width = getResources()
                 .getDisplayMetrics().widthPixels;
@@ -119,10 +178,12 @@ public class ScreenCaptureService extends Service {
                 captureHandler
             );
 
+            running = true;
             Log.i(TAG, "Screen capture pokrenut.");
 
         } catch (Exception e) {
             Log.e(TAG, "Pokretanje capture sustava nije uspjelo.", e);
+            stopCapture();
             stopSelf();
         }
 
@@ -161,8 +222,7 @@ public class ScreenCaptureService extends Service {
 
             int pixelStride = plane.getPixelStride();
             int rowStride = plane.getRowStride();
-            int rowPadding =
-                rowStride - pixelStride * width;
+            int rowPadding = rowStride - pixelStride * width;
 
             padded = Bitmap.createBitmap(
                 width + rowPadding / pixelStride,
@@ -173,11 +233,7 @@ public class ScreenCaptureService extends Service {
             padded.copyPixelsFromBuffer(plane.getBuffer());
 
             frame = Bitmap.createBitmap(
-                padded,
-                0,
-                0,
-                width,
-                height
+                padded, 0, 0, width, height
             );
 
             padded.recycle();
@@ -221,12 +277,11 @@ public class ScreenCaptureService extends Service {
     }
 
     private void createNotificationChannel() {
-        NotificationChannel channel =
-            new NotificationChannel(
-                "crbot",
-                "CrBot Vision",
-                NotificationManager.IMPORTANCE_LOW
-            );
+        NotificationChannel channel = new NotificationChannel(
+            CHANNEL_ID,
+            "CrBot Vision",
+            NotificationManager.IMPORTANCE_LOW
+        );
 
         NotificationManager manager =
             getSystemService(NotificationManager.class);
@@ -234,8 +289,9 @@ public class ScreenCaptureService extends Service {
         manager.createNotificationChannel(channel);
     }
 
-    @Override
-    public void onDestroy() {
+    private void stopCapture() {
+        running = false;
+
         if (reader != null) {
             reader.setOnImageAvailableListener(null, null);
             reader.close();
@@ -248,9 +304,17 @@ public class ScreenCaptureService extends Service {
         }
 
         if (projection != null) {
-            projection.stop();
+            MediaProjection oldProjection = projection;
             projection = null;
+            oldProjection.stop();
         }
+
+        processing.set(false);
+    }
+
+    @Override
+    public void onDestroy() {
+        stopCapture();
 
         vision.close();
 
@@ -259,11 +323,12 @@ public class ScreenCaptureService extends Service {
             captureThread = null;
         }
 
+        stopForeground(true);
         super.onDestroy();
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
+    public android.os.IBinder onBind(Intent intent) {
         return null;
     }
 }
