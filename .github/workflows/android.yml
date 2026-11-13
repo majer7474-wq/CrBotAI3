@@ -40,3 +40,4 @@ jobs:
           name: CrBotAI3-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          
