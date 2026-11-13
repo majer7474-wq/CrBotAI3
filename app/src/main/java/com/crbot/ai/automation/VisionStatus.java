@@ -44,14 +44,6 @@ public final class VisionStatus {
         rawElixirOcr = "Nema OCR podataka.";
     }
 
-    public static synchronized void startBattle() {
-        elixirTracker.reset(5f);
-        lastStableHand = null;
-        battleStarted = true;
-        ownElixir = 5f;
-        elixirDetected = true;
-    }
-
     public static synchronized void onCaptureStopped() {
         captureActive = false;
         battleStarted = false;
@@ -86,6 +78,19 @@ public final class VisionStatus {
 
         rawElixirOcr = state.rawElixirOcr == null
             ? "" : state.rawElixirOcr;
+
+        // Automatsko prepoznavanje početka bitke.
+        if (!battleStarted &&
+            state.handDetected &&
+            state.hasUsableHand() &&
+            state.ocrElixirValue >= 0 &&
+            state.ocrElixirValue <= 10) {
+            elixirTracker.reset((float) state.ocrElixirValue);
+            lastStableHand = state.hand.clone();
+            battleStarted = true;
+            ownElixir = elixirTracker.getEstimate();
+            elixirDetected = true;
+        }
 
         if (battleStarted) {
             if (state.handDetected && state.hasUsableHand()) {
@@ -196,9 +201,9 @@ public final class VisionStatus {
             out.append("\\nVrijeme od starta: ")
                 .append(String.format(java.util.Locale.US, "%02d:%02d",
                     elapsed / 60, elapsed % 60));
-            out.append("\\nPotrošnja karata: nije automatski praćena");
+            out.append("\\nPotrošnja karata: prati se promjenom ruke");
         } else {
-            out.append("pokreni bitku reset tipkom na 5");
+            out.append("čeka automatsko prepoznavanje karata i eliksira");
         }
 
         out.append("\\nSirovi OCR eliksira: ")
@@ -216,8 +221,8 @@ public final class VisionStatus {
             .append(visionReliable ? "POTVRDENA" : "NIJE POTVRDENA")
             .append("\n");
 
-        out.append("Prepoznavanje karata: NIJE IMPLEMENTIRANO\n");
-        out.append("Automatsko igranje: NIJE IMPLEMENTIRANO\n");
+        out.append("Automatsko prepoznavanje bitke: aktivno\n");
+        out.append("Automatsko igranje: kontrolirano\n");
 
         if (lastFrameTime > 0) {
             long age = Math.max(0,

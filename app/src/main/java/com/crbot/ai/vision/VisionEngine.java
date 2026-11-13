@@ -285,7 +285,11 @@ public class VisionEngine {
             pendingCount = 0;
         }
 
-        // OCR brojevi nisu pouzdan izvor eliksira.
+        state.ocrElixirValue = acceptedElixir >= 0 &&
+            System.currentTimeMillis() - acceptedElixirTime <= 2500
+                ? acceptedElixir : -1;
+
+        // OCR brojevi nisu trajni izvor eliksira.
         // ElixirTracker u VisionStatus vodi procjenu.
         state.ownElixir = -1;
         state.elixirDetected = false;

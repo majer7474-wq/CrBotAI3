@@ -130,38 +130,31 @@ public class FloatingOverlayService extends Service {
             LinearLayout.LayoutParams.MATCH_PARENT, dp(300)
         ));
 
-        Button start = new Button(this);
-        start.setText("1. START BOT");
-        start.setOnClickListener(v -> {
-            if (!ScreenCaptureService.isRunning()) {
-                report.setText("Prvo pokreni START VISION u aplikaciji.");
+
+        Button toggle = new Button(this);
+        toggle.setText(BotRuntime.isAutomationEnabled()
+            ? "PAUZA AUTOPLAY" : "NASTAVI AUTOPLAY");
+        toggle.setOnClickListener(v -> {
+            if (!BotRuntime.isActive()) {
+                report.setText("BOT NIJE AKTIVAN");
                 return;
             }
-            BotRuntime.enableAutomation();
-            report.setText(VisionStatus.getReport());
+            if (BotRuntime.isAutomationEnabled()) {
+                BotRuntime.disableAutomation();
+                toggle.setText("NASTAVI AUTOPLAY");
+                report.setText("AUTOPLAY PAUZIRAN");
+            } else {
+                BotRuntime.enableAutomation();
+                toggle.setText("PAUZA AUTOPLAY");
+                report.setText("AUTOPLAY NASTAVLJEN");
+            }
         });
-        box.addView(start);
+        box.addView(toggle);
 
-        Button stop = new Button(this);
-        stop.setText("2. STOP BOT");
-        stop.setOnClickListener(v -> {
-            BotRuntime.stopAll(this);
-            report.setText("BOT ZAUSTAVLJEN");
-        });
-        box.addView(stop);
 
-        Button minimize = new Button(this);
-        minimize.setText("3. MINIMIZIRAJ");
-        minimize.setOnClickListener(v -> hidePanel());
-        box.addView(minimize);
-
-        Button remove = new Button(this);
-        remove.setText("4. UKLONI PANEL");
-        remove.setOnClickListener(v -> stopSelf());
-        box.addView(remove);
 
         Button exit = new Button(this);
-        exit.setText("5. IZLAZ SVE - STOP BOT");
+        exit.setText("STOP SVE");
         exit.setOnClickListener(v -> {
             BotRuntime.stopAll(this);
             stopSelf();

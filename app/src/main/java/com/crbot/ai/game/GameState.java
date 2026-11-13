@@ -24,6 +24,7 @@ public class GameState {
     public boolean ocrCompleted = false;
     public String ocrErrorMessage = "";
     public String rawElixirOcr = "";
+    public int ocrElixirValue = -1;
     public boolean handDetected = false;
 
     public boolean enemyTroopDetected = false;

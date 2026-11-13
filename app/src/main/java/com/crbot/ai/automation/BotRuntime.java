@@ -19,7 +19,7 @@ public final class BotRuntime {
     public static void startSession() {
         synchronized (LOCK) {
             active = true;
-            automationEnabled = false;
+            automationEnabled = true;
             BotController.reset();
         }
     }
