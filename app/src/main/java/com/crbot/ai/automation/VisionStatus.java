@@ -10,7 +10,7 @@ public final class VisionStatus {
     private static long ocrErrors = 0;
     private static long lastFrameTime = 0;
 
-    private static int ownElixir = -1;
+    private static float ownElixir = -1f;
     private static boolean elixirDetected = false;
     private static float enemyMotion = 0f;
     private static float ownMotion = 0f;
